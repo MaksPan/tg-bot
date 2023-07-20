@@ -1,0 +1,55 @@
+import logging
+import requests
+from telegram import Update
+from telegram.ext import Updater, CommandHandler, CallbackContext
+
+# Your Telegram bot token from BotFather
+TOKEN = 'YOUR_TELEGRAM_BOT_TOKEN'
+
+# Your News API key
+NEWS_API_KEY = 'YOUR_NEWS_API_KEY'
+
+# URL for financial news API
+NEWS_API_URL = f'https://newsapi.org/v2/top-headlines?country=us&category=business&apiKey={NEWS_API_KEY}'
+
+# Set up logging
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+
+# Command handler for /start
+def start(update: Update, _: CallbackContext) -> None:
+    user = update.effective_user
+    update.message.reply_text(f'Hello, {user.mention_html()}! I am the Financial News bot. '
+                              f'Use /news to get the latest financial news headlines.')
+
+# Command handler for /news
+def news(update: Update, _: CallbackContext) -> None:
+    response = requests.get(NEWS_API_URL)
+    data = response.json()
+    articles = data['articles']
+
+    if not articles:
+        update.message.reply_text('Sorry, no financial news is available at the moment.')
+        return
+
+    news_headlines = [f"{index + 1}. {article['title']}\nSource: {article['source']['name']}" for index, article in enumerate(articles)]
+
+    update.message.reply_text('\n\n'.join(news_headlines))
+
+def main() -> None:
+    updater = Updater(TOKEN)
+
+    # Get the dispatcher to register handlers
+    dp = updater.dispatcher
+
+    # Register command handlers
+    dp.add_handler(CommandHandler("start", start))
+    dp.add_handler(CommandHandler("news", news))
+
+    # Start the Bot
+    updater.start_polling()
+
+    # Run the bot until the user presses Ctrl-C
+    updater.idle()
+
+if __name__ == '__main__':
+    main()
